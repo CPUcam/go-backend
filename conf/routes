@@ -14,8 +14,6 @@ GET     /upload                                 App.Upload
 
 GET     /student                                App.Student
 
-GET     /ViewerJS                               App.Viewer
-     
 # Ignore favicon requests
 GET     /favicon.ico                            404
 

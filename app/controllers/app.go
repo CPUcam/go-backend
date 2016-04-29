@@ -101,7 +101,3 @@ func (c App) Upload() revel.Result {
 func (c App) Student() revel.Result {
 	return c.Render()
 }
-
-func (c App) Viewer() revel.Result {
-	return c.Render()
-}
