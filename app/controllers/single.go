@@ -2,7 +2,7 @@ package controllers
 
 import (
 	//"bytes"
-	//"fmt"
+	"fmt"
 	//"image"
 	//_ "image/jpeg"
 	//_ "image/png"
@@ -14,6 +14,12 @@ import (
 	//"net/http"
 	//"bufio"
 
+	"path/filepath"
+
+	"math/rand"
+	"strconv"
+	"html/template"
+
 	//"strings"
 	// "github.com/revel/samples/upload/app/routes"
 
@@ -24,6 +30,8 @@ import (
   "github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
+var global_code string
+
 const (
 	_      = iota
 	KB int = 1 << (10 * iota)
@@ -32,14 +40,18 @@ const (
 )
 
 type Single struct {
-		App
+		*revel.Controller
 }
 
-func (c *Single) Upload() revel.Result {
+func (c Single) Upload() revel.Result {
 	return c.Render()
 }
 
-func (c *Single) HandleUpload(avatar []byte) revel.Result {
+func (c Single) Download() revel.Result  {
+	return c.Render()
+}
+
+func (c Single) HandleUpload(avatar []byte) revel.Result {
 	// Validation rules.
 	c.Validation.Required(avatar)
 	c.Validation.MinSize(avatar, 1*KB).
@@ -55,14 +67,40 @@ func (c *Single) HandleUpload(avatar []byte) revel.Result {
 	// 	Message("JPEG or PNG file format is expected")
 
 	var name string = c.Params.Files["avatar"][0].Filename
-	var path string = "src/myapp/upload/" + name
+	// var path string = "src/myapp/upload/" + name
 
-	dst, err := os.Create("src/myapp/upload/" + name)
+	//Check extension of file
+	var ext string = filepath.Ext(name)
+	if (ext != ".pdf") {
+		log.Printf("File must have a .pdf extension.")
+		return c.Redirect(Single.Upload)
+	}
+	log.Printf("extension is " + ext)
+
+	var r [8]int
+	for i := 0; i < 8; i++ {
+		r[i] = rand.Intn(9)
+	}
+
+	fmt.Println("%v", r[0])
+	var strr string = ""
+	for j := 0; j < 8; j++ {
+		strr += strconv.Itoa(r[j])
+	}
+	fmt.Println("code: " + strr)
+
+	global_code = strr
+
+	var newName string = strr + name
+	var newPath string = "src/myapp/upload/" + newName
+
+	dst, err := os.Create("src/myapp/upload/" + newName)
 	defer dst.Close()
 	if err != nil {
 		log.Printf("error in creating dst")
 	}
 
+	log.Printf("new file name is " + newName)
 	//Writes resume to created destination
 	n2, err := dst.Write(avatar)
 	defer dst.Close()
@@ -76,13 +114,14 @@ func (c *Single) HandleUpload(avatar []byte) revel.Result {
 	// 	c.FlashParams()
 	// 	return c.Redirect(App.Upload)
 	// }
-	ListBuckets(name, path)
+	UploadFile(newName, newPath)
 
-	err = os.Remove(path)
+	err = os.Remove(newPath)
 	if err != nil	{
 		log.Printf("error removing temp file")
 	}
 
+	//Returns json info of uploaded file, needs to be changed
 	return c.RenderJson(FileInfo{
 		ContentType: c.Params.Files["avatar"][0].Header.Get("Content-Type"),
 		Filename:    c.Params.Files["avatar"][0].Filename,
@@ -93,7 +132,7 @@ func (c *Single) HandleUpload(avatar []byte) revel.Result {
 	})
 }
 
-func ListBuckets(key, path string) {
+func UploadFile(key, path string) {
 	file, err := os.Open(path)
     if err != nil {
         log.Fatal("Failed to open file", err)
@@ -110,6 +149,8 @@ func ListBuckets(key, path string) {
         gw.Close()
         writer.Close()
     }()
+
+		//Creates new uploader and uploads file passed path location
     uploader := s3manager.NewUploader(session.New(&aws.Config{Region: aws.String("us-west-2")}))
     result, err := uploader.Upload(&s3manager.UploadInput{
         Body:   reader,
@@ -123,40 +164,10 @@ func ListBuckets(key, path string) {
     log.Println("Successfully uploaded to", result.Location)
 }
 
-
-// func (c *Single) ListBuckets() revel.Result {
-// 	bucket := "trurecruit"
-// 	key := "test.txt"
-//
-// 	svc := s3.New(session.New(&aws.Config{Region: aws.String("us-west-2")}))
-// 	// result, err := svc.CreateBucket(&s3.CreateBucketInput{
-// 	//     Bucket: &bucket,
-// 	// })
-// 	// if err != nil {
-// 	//     log.Println("Failed to create bucket", err)
-// 	//     return nil
-// 	// }
-// 	//
-// 	// if err = svc.WaitUntilBucketExists(&s3.HeadBucketInput{Bucket: &bucket}); err != nil {
-// 	//     log.Printf("Failed to wait for bucket to exist %s, %s\n", bucket, err)
-// 	//     return nil
-// 	// }
-//
-// 	uploadResult, err := svc.PutObject(&s3.PutObjectInput{
-// 	    Body:   strings.NewReader("Hello World!"),
-// 	    Bucket: &bucket,
-// 	    Key:    &key,
-// 	})
-// 	if err != nil {
-// 	    log.Printf("Failed to upload data to %s/%s, %s\n", bucket, key, err)
-// 	    return nil
-// 	}
-// 	// if result != nil {
-// 	// 	log.Printf("Successfully created bucket %s and uploaded data with key %s\n", bucket, key)
-// 	// 	return nil
-// 	// }
-// 	if uploadResult != nil {
-// 		log.Printf("wa")
-// 	}
-// 	return c.Redirect(App.Upload)
-// }
+func returnCode() {
+	tmpl, err := template.New("").Parse("{{.returnCode}}")
+	if err != nil {
+		log.Fatalf("Parse %v", err)
+	}
+	tmpl.Execute(os.Stdout, global_code)
+}

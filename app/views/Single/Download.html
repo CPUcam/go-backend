@@ -1,0 +1,24 @@
+{{set . "title" "Login"}}
+{{template "header.html"}}
+
+<h1>File Download</h1>
+
+<div class="container">
+	<div class="row">
+		<div class="span6">
+			<form method="post" action="{{url "Single.HandleUpload"}}" enctype="multipart/form-data">
+				<p>
+					<label for="avatar"><strong>Resume</strong></label>
+					<input type="file" name="avatar" id="avatar" class="span6">
+				</p>
+				<hr>
+				<input type="submit" value="Upload" class="btn btn-large btn-success">
+			</form>
+		</div>
+		<div class="span6">
+			<i>
+				Your resume is expected to be in PDF or ... format.
+				Maximum file size is 20 MB.
+			</i>
+		</div>
+	</div>

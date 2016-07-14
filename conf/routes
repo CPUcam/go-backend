@@ -10,7 +10,9 @@ GET     /login                                  App.Login
 
 GET     /signup                                 App.SignUp
 
-GET     /upload                                 App.Upload
+GET     /upload                                 Single.Upload
+
+GET     /download                               Single.Download
 
 GET     /student                                App.Student
 
